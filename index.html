@@ -8,25 +8,15 @@
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-<!-- Social share preview -->
+<!-- Social share preview (iMessage, WhatsApp, Slack, Twitter/X, Facebook, etc.) -->
 <meta property="og:title" content="Auto Train Adventure Begins In…">
-<meta property="og:description" content="Cinematic countdown to Amtrak Auto Train 53 — Lorton, VA → Sanford, FL.">
+<meta property="og:description" content="Amtrak Auto Train 53 · Highland Mills, NY → Tampa, FL. The adventure is loading… 🚂">
 <meta property="og:image" content="og-image.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Auto Train Adventure Begins In…">
-<meta name="twitter:description" content="Cinematic countdown to Amtrak Auto Train 53 — Lorton, VA → Sanford, FL.">
+<meta name="twitter:description" content="Amtrak Auto Train 53 · Highland Mills, NY → Tampa, FL. The adventure is loading… 🚂">
 <meta name="twitter:image" content="og-image.png">
-
-<!-- Social share preview (iMessage, WhatsApp, Slack, Twitter/X, Facebook, etc.) -->
-<meta property="og:title" content="Auto Train Adventure Begins In…">
-<meta property="og:description" content="Amtrak Auto Train 53 · Lorton, VA → Sanford, FL. The adventure is loading… 🚂">
-<meta property="og:image" content="preview.png">
-<meta property="og:type" content="website">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Auto Train Adventure Begins In…">
-<meta name="twitter:description" content="Amtrak Auto Train 53 · Lorton, VA → Sanford, FL. The adventure is loading… 🚂">
-<meta name="twitter:image" content="preview.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Marcellus&family=Space+Mono:wght@400;700&family=Cinzel:wght@600;900&display=swap" rel="stylesheet">
 <style>
@@ -218,6 +208,18 @@
     box-shadow: 0 0 30px rgba(212,175,106,0.5);
   }
   .gate .muted-note{ font-size:8.5px; opacity:0.6; max-width:280px; }
+
+  .sound-hint{
+    position:absolute; bottom:2.2vh; right:5%; z-index:35;
+    font-family:'Space Mono',monospace; font-size:10px; letter-spacing:1px;
+    color:var(--gold-bright);
+    background:rgba(6,9,20,0.55); border:1px solid rgba(212,175,106,0.3);
+    padding:6px 12px; border-radius:20px;
+    animation: hintPulse 1.8s ease-in-out infinite;
+    transition: opacity 0.5s ease;
+  }
+  .sound-hint.hidden{ opacity:0; pointer-events:none; }
+  @keyframes hintPulse{ 0%,100%{ opacity:0.7; } 50%{ opacity:1; } }
 </style>
 </head>
 <body>
@@ -280,11 +282,13 @@
       <div class="unit"><div class="num" id="secs">00</div><div class="lbl">Sec</div></div>
     </div>
     <div class="route-map">
-      <span>Lorton, VA</span><span class="line"></span><span style="color:var(--gold-bright)">Sanford, FL</span>
+      <span>Highland Mills, NY</span><span class="line"></span><span style="color:var(--gold-bright)">Tampa, FL</span>
     </div>
   </div>
 
   <div class="footer"><p>The adventure is loading&hellip; 🚂</p></div>
+
+  <div class="sound-hint" id="soundHint">🔇 Tap anywhere for sound</div>
 </div>
 
 <script>
@@ -395,6 +399,18 @@ function updateFx(){
 let actx = null, engineNode=null, engineGain=null;
 function initAudio(){
   actx = new (window.AudioContext||window.webkitAudioContext)();
+
+  // iOS/Chrome mobile often create the context in a "suspended" state
+  // even inside a user-gesture handler, and iOS specifically needs a
+  // silent buffer played synchronously in that same gesture to fully
+  // unlock audio. Do both, belt-and-suspenders.
+  if(actx.state === 'suspended') actx.resume();
+  const unlockBuf = actx.createBuffer(1, 1, actx.sampleRate);
+  const unlockSrc = actx.createBufferSource();
+  unlockSrc.buffer = unlockBuf;
+  unlockSrc.connect(actx.destination);
+  unlockSrc.start(0);
+
   // engine rumble: filtered noise loop
   const bufferSize = 2*actx.sampleRate;
   const noiseBuf = actx.createBuffer(1, bufferSize, actx.sampleRate);
@@ -552,10 +568,15 @@ phaseStart = performance.now();
 // never waits on this.
 function armAudioOnce(){
   if(!actx) initAudio();
+  else if(actx.state === 'suspended') actx.resume();
+  const hint = document.getElementById('soundHint');
+  if(hint) hint.classList.add('hidden');
   window.removeEventListener('pointerdown', armAudioOnce);
+  window.removeEventListener('touchend', armAudioOnce);
   window.removeEventListener('keydown', armAudioOnce);
 }
 window.addEventListener('pointerdown', armAudioOnce);
+window.addEventListener('touchend', armAudioOnce);
 window.addEventListener('keydown', armAudioOnce);
 </script>
 </body>
