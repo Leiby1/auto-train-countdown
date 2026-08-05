@@ -563,21 +563,37 @@ running = true;
 phase = 'distant';
 phaseStart = performance.now();
 
-// Browsers block audio until a user gesture, so quietly arm it on the
-// first tap/click/key anywhere on the page — the animation itself
-// never waits on this.
+// Browsers only allow sound to start unmuted without a tap in a few
+// situations (some desktop browsers, or a site you've visited/granted
+// audio permission before) — so try immediately on load first...
+function tryAutoStartAudio(){
+  initAudio();
+  if(actx.state === 'running'){
+    const hint = document.getElementById('soundHint');
+    if(hint) hint.classList.add('hidden');
+  }
+}
+tryAutoStartAudio();
+
+// ...and if the browser blocked that (state stays 'suspended'), fall
+// back to unlocking on the very first tap/click/key anywhere on the
+// page — the countdown and animation never wait on this either way.
 function armAudioOnce(){
   if(!actx) initAudio();
-  else if(actx.state === 'suspended') actx.resume();
+  if(actx.state === 'suspended') actx.resume();
   const hint = document.getElementById('soundHint');
   if(hint) hint.classList.add('hidden');
   window.removeEventListener('pointerdown', armAudioOnce);
   window.removeEventListener('touchend', armAudioOnce);
   window.removeEventListener('keydown', armAudioOnce);
 }
-window.addEventListener('pointerdown', armAudioOnce);
-window.addEventListener('touchend', armAudioOnce);
-window.addEventListener('keydown', armAudioOnce);
+if(actx.state === 'suspended'){
+  window.addEventListener('pointerdown', armAudioOnce);
+  window.addEventListener('touchend', armAudioOnce);
+  window.addEventListener('keydown', armAudioOnce);
+} else {
+  document.getElementById('soundHint')?.classList.add('hidden');
+}
 </script>
 </body>
 </html>
